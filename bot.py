@@ -208,6 +208,7 @@ RULES — FOLLOW EXACTLY:
                 top_p=0.9,
             )
             output = res.choices[0].message.content.strip()
+            logger.info("Groq SUCCESS - got %d chars: %s", len(output), output[:80])
             return output.replace("\n\n\n", "\n\n")
         except Exception as e:
             logger.warning("Groq API error (attempt %d): %s", attempt + 1, e)
@@ -248,9 +249,10 @@ def send_telegram(raw_text, pro_edit=False, match_facts=None):
     # Then follow up with AI version if available
     if pro_edit and GROQ_API_KEY and match_facts:
         ai_text = get_pro_edit(match_facts)
+        logger.info("AI text ready to send: %s", bool(ai_text))
         if ai_text:
             try:
-                requests.post(
+                res2 = requests.post(
                     url,
                     data={
                         "chat_id": CHAT_ID,
@@ -260,6 +262,7 @@ def send_telegram(raw_text, pro_edit=False, match_facts=None):
                     },
                     timeout=10,
                 )
+                logger.info("Telegram AI send status: %s | %s", res2.status_code, res2.text[:200])
             except requests.RequestException as exc:
                 logger.warning("send_telegram AI failed: %s", exc)
 
