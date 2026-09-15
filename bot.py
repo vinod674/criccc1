@@ -163,7 +163,7 @@ EXAMPLE 2 (Match Update):
 🏏 10 OVER UPDATE – ENG vs SL 🏏
 England 68/4 after 10, and it's scrappy.
 
-Phil Salt (37*) is fighting alone as Sri Lanka's spinners choke the innings. Brook (14) falls right on the mark. Middle order needs to fire, fast.
+Phil Salt (37*) is fighting alone as Sri Lanka's spinners choke the innings. The middle order needs to fire, fast.
 
 ---
 STRICT CURRENT FACTS TO USE:
@@ -176,9 +176,9 @@ STRICT CURRENT FACTS TO USE:
 - Official Status / Commentary: {match_facts.get('status_text', '')}
 
 RULES — FOLLOW EXACTLY:
-1. Exactly 1 heading, then 1 SHORT paragraph. No second paragraph.
-2. Blank line between heading and paragraph.
-3. HARD LIMIT: max 2 sentences, max ~35 words total in the paragraph. Shorter is better.
+1. Exactly 1 heading, then 2 SHORT paragraphs.
+2. Blank line between heading and each paragraph.
+3. Each paragraph: 1-2 sentences, max ~30 words. Total across both paragraphs: max ~60 words.
 4. No fluff, no filler adjectives. Every word should earn its place.
 5. TONE: {custom_instruction if custom_instruction else "Keep it sharp, factual, and easy to skim in 2 seconds."}
 6. STRICT: If 'Current Innings' is 2, DO NOT mention who won the toss. Focus only on the chase.
@@ -204,7 +204,7 @@ RULES — FOLLOW EXACTLY:
                 model="openai/gpt-oss-120b",
                 messages=messages,
                 temperature=0.6,
-                max_tokens=400,   # gpt-oss burns tokens on internal reasoning first
+                max_tokens=300,   # room for a 2-paragraph short update
                 top_p=0.9,
                 reasoning_effort="low",  # minimize reasoning tokens, favor final answer
             )
