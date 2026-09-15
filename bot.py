@@ -10,13 +10,16 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 from bs4 import BeautifulSoup
+from groq import Groq
 
 # =====================
 # CONFIGURATION
 # =====================
 BOT_TOKEN    = os.getenv("BOT_TOKEN")
 CHAT_ID      = os.getenv("CHAT_ID")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 HEADERS = {
     "User-Agent": (
@@ -123,14 +126,8 @@ def get_pro_edit(match_facts):
     Call the Groq LLM to generate a polished, channel-ready WhatsApp post.
     Returns the AI text on success, or None on any failure (after retrying once).
     """
-    if not GROQ_API_KEY or not match_facts:
+    if not groq_client or not match_facts:
         return None
-
-    url     = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY.strip()}",
-        "Content-Type": "application/json",
-    }
 
     event_type      = match_facts.get("event_type", "")
     current_wickets = match_facts.get("wickets", 0)
@@ -189,29 +186,28 @@ RULES — FOLLOW EXACTLY:
 8. Do not use hashtags, emojis beyond the heading, or sign-offs.
 """
 
-    data = {
-        "model": "openai/gpt-oss-120b",
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "You are an elite cricket news editor who writes tight, scannable "
-                    "WhatsApp updates. You never pad your writing — short and sharp always "
-                    "beats long and flowery. You mirror the user's style examples exactly."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.6,
-        "max_tokens": 140,   # Tightened — heading + 1 short paragraph only
-        "top_p": 0.9,
-    }
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are an elite cricket news editor who writes tight, scannable "
+                "WhatsApp updates. You never pad your writing — short and sharp always "
+                "beats long and flowery. You mirror the user's style examples exactly."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
 
     for attempt in range(2):
         try:
-            res    = requests.post(url, headers=headers, json=data, timeout=15)
-            res.raise_for_status()
-            output = res.json()["choices"][0]["message"]["content"].strip()
+            res = groq_client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=messages,
+                temperature=0.6,
+                max_tokens=120,   # Tightened — heading + 1 short paragraph only
+                top_p=0.9,
+            )
+            output = res.choices[0].message.content.strip()
             return output.replace("\n\n\n", "\n\n")
         except Exception as e:
             logger.warning("Groq API error (attempt %d): %s", attempt + 1, e)
