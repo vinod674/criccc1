@@ -1226,6 +1226,9 @@ def run_bot():
         logger.error("Missing BOT_TOKEN and/or CHAT_ID. Bot cannot start.")
         return
 
+    logger.info("=" * 50)
+    logger.info("BUILD: groq-sdk-v2 | groq_client_ready=%s", groq_client is not None)
+    logger.info("=" * 50)
     logger.info("🚀 Cricket Notification Bot Starting...")
     send_telegram(
         "✅ *Live-Only Tracker Active!* 🏏\n"
