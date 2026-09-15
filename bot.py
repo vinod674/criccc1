@@ -121,13 +121,16 @@ _TONE_MAP = {
 def get_pro_edit(match_facts):
     """
     Call the Groq LLM to generate a polished, channel-ready WhatsApp post.
-    Returns the AI text on success, or None on any failure.
+    Returns the AI text on success, or None on any failure (after retrying once).
     """
     if not GROQ_API_KEY or not match_facts:
         return None
 
     url     = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY.strip()}",
+        "Content-Type": "application/json",
+    }
 
     event_type      = match_facts.get("event_type", "")
     current_wickets = match_facts.get("wickets", 0)
@@ -148,64 +151,73 @@ def get_pro_edit(match_facts):
                 "momentum shift towards the bowling side."
             )
 
-    prompt = f"""You are a professional Cricket News Editor for a premium WhatsApp channel.
-Rewrite the raw match data into a CRISP, EXCITING NARRATIVE post.
+    prompt = f"""You are a sharp cricket news editor for a fast-moving WhatsApp channel.
+Turn the raw match data below into a SHORT, PUNCHY post. Readers are on their phones — get to the point fast.
 
-YOUR OUTPUT MUST MIRROR THE TONE AND STRUCTURE OF THESE EXAMPLES:
+MATCH THE STYLE OF THESE EXAMPLES EXACTLY:
 
 EXAMPLE 1 (Toss):
 🏏 TOSS UPDATE – ENG vs SL 🏏
-Sri Lanka have won the toss and elected to bowl first in their Super 8 opener at the Pallekele International Cricket Stadium.
+Sri Lanka win the toss, elect to bowl first at Pallekele.
 
-A massive game in Group 2 to kick off the business end. The Lankan Lions will look to exploit the early moisture on a surface that promises plenty of turn. Game on!
+Early moisture on offer — the Lankan spinners will fancy this. Game on!
 
 EXAMPLE 2 (Match Update):
 🏏 10 OVER UPDATE – ENG vs SL 🏏
-England find themselves in a tough spot, reaching 68/4 after 10 overs in their Super 8 opener.
+England 68/4 after 10, and it's scrappy.
 
-Phil Salt (37*) is leading a lone fightback, but Sri Lanka's spinners have dominated, including the massive wicket of captain Harry Brook (14) right at the 10-over mark. The middle order needs to stabilize quickly or risk a complete collapse.
+Phil Salt (37*) is fighting alone as Sri Lanka's spinners choke the innings. Brook (14) falls right on the mark. Middle order needs to fire, fast.
 
 ---
 STRICT CURRENT FACTS TO USE:
 - Match: {match_facts.get('match_name', 'Unknown')}
 - Event: {event_type}
-- Batting Team (The team currently playing the balls): {match_facts.get('team_batting', 'Unknown')}
+- Batting Team (currently on strike): {match_facts.get('team_batting', 'Unknown')}
 - Bowling Team: {match_facts.get('team_bowling', 'Unknown')}
 - Current Innings: {match_facts.get('innings', 1)}
 - Score: {match_facts.get('score_display', 'Unknown')}
 - Official Status / Commentary: {match_facts.get('status_text', '')}
 
-RULES:
-1. Exactly 1 Heading and 2 narrative paragraphs.
-2. IMPORTANT: Separate the heading and each paragraph with a blank line.
-3. Total Length: 3-4 sentences across both paragraphs.
-4. TONE INSTRUCTION: {custom_instruction if custom_instruction else "Make the summary engaging and analytical based on the current score."}
-5. STRICT: If 'Current Innings' is 2, DO NOT mention who won the toss in your summary. Focus ONLY on the chase and the team currently batting.
-6. NEVER invent stats not provided in the 'STRICT CURRENT FACTS' above.
+RULES — FOLLOW EXACTLY:
+1. Exactly 1 heading, then 1 SHORT paragraph. No second paragraph.
+2. Blank line between heading and paragraph.
+3. HARD LIMIT: max 2 sentences, max ~35 words total in the paragraph. Shorter is better.
+4. No fluff, no filler adjectives. Every word should earn its place.
+5. TONE: {custom_instruction if custom_instruction else "Keep it sharp, factual, and easy to skim in 2 seconds."}
+6. STRICT: If 'Current Innings' is 2, DO NOT mention who won the toss. Focus only on the chase.
+7. NEVER invent stats not given in 'STRICT CURRENT FACTS' above.
+8. Do not use hashtags, emojis beyond the heading, or sign-offs.
 """
 
     data = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "messages": [
             {
                 "role": "system",
-                "content": "You are an elite cricket news editor who mirrors the user's specific writing style examples perfectly. You change your tone based on the context of the game.",
+                "content": (
+                    "You are an elite cricket news editor who writes tight, scannable "
+                    "WhatsApp updates. You never pad your writing — short and sharp always "
+                    "beats long and flowery. You mirror the user's style examples exactly."
+                ),
             },
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.7,
-        "max_tokens": 200,   # Room for heading + 2 narrative paragraphs
+        "temperature": 0.6,
+        "max_tokens": 140,   # Tightened — heading + 1 short paragraph only
         "top_p": 0.9,
     }
 
-    try:
-        res    = requests.post(url, headers=headers, json=data, timeout=15)
-        res.raise_for_status()
-        output = res.json()["choices"][0]["message"]["content"].strip()
-        return output.replace("\n\n\n", "\n\n")
-    except Exception as e:
-        logger.warning("Groq API error: %s", e)
-        return None
+    for attempt in range(2):
+        try:
+            res    = requests.post(url, headers=headers, json=data, timeout=15)
+            res.raise_for_status()
+            output = res.json()["choices"][0]["message"]["content"].strip()
+            return output.replace("\n\n\n", "\n\n")
+        except Exception as e:
+            logger.warning("Groq API error (attempt %d): %s", attempt + 1, e)
+            if attempt == 0:
+                time.sleep(1)
+    return None
 
 
 # =====================
