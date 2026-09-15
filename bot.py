@@ -178,7 +178,7 @@ STRICT CURRENT FACTS TO USE:
 RULES — FOLLOW EXACTLY:
 1. Exactly 1 heading, then 2 SHORT paragraphs.
 2. Blank line between heading and each paragraph.
-3. Each paragraph: 1-2 sentences, max ~30 words. Total across both paragraphs: max ~60 words.
+3. Each paragraph: 2-3 sentences, max ~45 words. Total across both paragraphs: max ~90 words.
 4. No fluff, no filler adjectives. Every word should earn its place.
 5. TONE: {custom_instruction if custom_instruction else "Keep it sharp, factual, and easy to skim in 2 seconds."}
 6. STRICT: If 'Current Innings' is 2, DO NOT mention who won the toss. Focus only on the chase.
@@ -204,7 +204,7 @@ RULES — FOLLOW EXACTLY:
                 model="openai/gpt-oss-120b",
                 messages=messages,
                 temperature=0.6,
-                max_tokens=300,   # room for a 2-paragraph short update
+                max_tokens=450,   # room for 2-3 sentence paragraphs
                 top_p=0.9,
                 reasoning_effort="low",  # minimize reasoning tokens, favor final answer
             )
