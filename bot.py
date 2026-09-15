@@ -204,12 +204,17 @@ RULES — FOLLOW EXACTLY:
                 model="openai/gpt-oss-120b",
                 messages=messages,
                 temperature=0.6,
-                max_tokens=120,   # Tightened — heading + 1 short paragraph only
+                max_tokens=400,   # gpt-oss burns tokens on internal reasoning first
                 top_p=0.9,
+                reasoning_effort="low",  # minimize reasoning tokens, favor final answer
             )
-            output = res.choices[0].message.content.strip()
+            msg_obj = res.choices[0].message
+            output  = (msg_obj.content or "").strip()
+            if not output:
+                logger.warning("Empty content. finish_reason=%s full_message=%s",
+                                res.choices[0].finish_reason, msg_obj)
             logger.info("Groq SUCCESS - got %d chars: %s", len(output), output[:80])
-            return output.replace("\n\n\n", "\n\n")
+            return output.replace("\n\n\n", "\n\n") if output else None
         except Exception as e:
             logger.warning("Groq API error (attempt %d): %s", attempt + 1, e)
             if attempt == 0:
